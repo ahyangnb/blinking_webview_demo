@@ -31,7 +31,10 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
-  String cacheSize = "Calculating..."; // 缓存大小 Cache size
+  ///缓存大小
+  double cache = 0;
+
+  String cacheStr = "0.00B";
 
   @override
   void initState() {
@@ -39,45 +42,85 @@ class _MyHomePageState extends State<MyHomePage> {
     loadCacheSize(); // 加载缓存大小 Load cache size
   }
 
+
+  Future<double> getCurrentTotalSizeOfFilesInDir(
+      final FileSystemEntity file) async {
+    if (file is File && file.existsSync()) {
+      int length = await file.length();
+      return double.parse(length.toString());
+    }
+    if (file is Directory && file.existsSync()) {
+      List currentChildren = file.listSync();
+      double currentTotalCache = 0;
+      if (currentChildren.isNotEmpty)
+        for (final FileSystemEntity child in currentChildren) {
+          currentTotalCache += await getCurrentTotalSizeOfFilesInDir(child);
+        }
+      return currentTotalCache;
+    }
+    return 0.0;
+  }
+
   // 计算缓存大小 Calculate cache size
   Future<void> loadCacheSize() async {
-    final tempDir = await getTemporaryDirectory();
-    final cacheDir = Directory('${tempDir.path}/WebView');
+      /// 获取文件夹
+    Directory currentAppDirectory = await getTemporaryDirectory();
 
-    if (await cacheDir.exists()) {
-      int totalSize = 0;
-      await for (var entity
-          in cacheDir.list(recursive: true, followLinks: false)) {
-        if (entity is File) {
-          totalSize += await entity.length();
-        }
-      }
-      setState(() {
-        cacheSize = '${(totalSize / 1024 / 1024).toStringAsFixed(2)} MB';
-      });
-    } else {
-      setState(() {
-        cacheSize = '0 MB';
-      });
+    /// 获取缓存大小
+    double cacheValueSize =
+        await getCurrentTotalSizeOfFilesInDir(currentAppDirectory);
+    cache = cacheValueSize;
+    cacheStr = formatAppCacheSize(cache);
+    if(mounted){
+      setState(() {});
     }
   }
 
+  //格式化文件大小
+  String formatAppCacheSize(cache) {
+    if (cache == null) {
+      return '0.0';
+    }
+    List<String> arrayUnit = []
+      ..add('B')
+      ..add('K')
+      ..add('M')
+      ..add('G');
+    int index = 0;
+    while (cache > 1024) {
+      index++;
+      cache = cache / 1024;
+    }
+    String currentAppSize = cache.toStringAsFixed(2);
+    return currentAppSize + arrayUnit[index];
+  }
   // 清除缓存 Clear cache
-  Future<void> clearCache() async {
-    final tempDir = await getTemporaryDirectory();
-    
-    // 删除临时目录下的所有内容 Delete all contents in temp directory
-    if (await tempDir.exists()) {
-      await tempDir.delete(recursive: true);
-      // 重新创建临时目录 Recreate temp directory
-      await tempDir.create();
+  clearCache() async {
+    Directory cacheDir = await getTemporaryDirectory();
+    cacheStr = "0.00B";
+    if (cacheDir.existsSync()) {
+      // cacheDir.deleteSync(recursive: true);
+      deleteCurrentAppDirectory(cacheDir);
     }
-
-    setState(() {
-      cacheSize = '0 MB';
-    });
+    if(mounted){
+      setState(() {});
+    }
+    // encounterPrint("缓存目录已删除");
+    //删除缓存目录
+    // await deleteCurrentAppDirectory(currentAppDirectory);
+    // loadApplicationCache();
   }
 
+  /// 递归方式删除目录
+  deleteCurrentAppDirectory(FileSystemEntity file) async {
+    if (file is Directory) {
+      final List<FileSystemEntity> children = file.listSync();
+      for (final FileSystemEntity child in children) {
+        await deleteCurrentAppDirectory(child);
+      }
+    }
+    await file.delete();
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -92,12 +135,18 @@ class _MyHomePageState extends State<MyHomePage> {
           children: <Widget>[
             // 显示缓存大小 Display cache size
             Text(
-              'Current Cache Size: // 当前缓存大小',
-              style: Theme.of(context).textTheme.titleLarge,
+              'Current Cache Size:',
+              style: Theme.of(context)
+                  .textTheme
+                  .titleLarge
+                  ?.copyWith(color: Colors.red.withAlpha(170)),
             ),
             Text(
-              cacheSize,
-              style: Theme.of(context).textTheme.headlineMedium,
+              cacheStr,
+              style: Theme.of(context)
+                  .textTheme
+                  .headlineMedium
+                  ?.copyWith(color: Colors.red.withAlpha(170)),
             ),
             const SizedBox(height: 20),
             // 清除缓存按钮 Clear cache button
