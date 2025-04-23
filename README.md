@@ -8,7 +8,8 @@ Only repoduce on ios, especially when first open app or after clean cache.
 
 # Reproduce video
 
-RPReplay_Final1745393942.MP4
+https://github.com/ahyangnb/blinking_webview_demo/blob/main/RPReplay_Final1745393942.MP4
+
 
 # Env
 Flutter 3.29.3
