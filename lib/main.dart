@@ -105,10 +105,6 @@ class _MyHomePageState extends State<MyHomePage> {
     if(mounted){
       setState(() {});
     }
-    // encounterPrint("缓存目录已删除");
-    //删除缓存目录
-    // await deleteCurrentAppDirectory(currentAppDirectory);
-    // loadApplicationCache();
   }
 
   /// 递归方式删除目录
